@@ -1085,6 +1085,281 @@ void party3(u64 myIdx, u64 setSize, u64 nTrials)
 	ios.stop();
 }
 
+void okvs(u64 myIdx, u64 setSize, u64 protocolType)
+{
+	nParties = 2;
+	u64  psiSecParam = 40, bitSize = 128, numThreads = 1;
+	PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+
+	std::vector<block> set(setSize);
+	for (u64 i = 0; i < setSize; ++i)
+		set[i] = mSet[i];
+
+	PRNG prng1(_mm_set_epi32(4253465, myIdx, myIdx, myIdx)); //for test
+	set[0] = prng1.get<block>();;
+
+	std::vector<block> sendPayLoads(setSize);
+	std::vector<block> recvPayLoads(setSize);
+
+	//only P0 genaretes secret sharing
+	if (myIdx == 0)
+	{
+		for (u64 i = 0; i < setSize; ++i)
+			sendPayLoads[i] = prng.get<block>();
+	}
+
+
+	std::string name("psi");
+	BtIOService ios(0);
+
+	int btCount = nParties;
+	std::vector<BtEndpoint> ep(nParties);
+
+	u64 offlineTimeTot(0);
+	u64 onlineTimeTot(0);
+	Timer timer;
+
+	for (u64 i = 0; i < nParties; ++i)
+	{
+		if (i < myIdx)
+		{
+			u32 port = 1210 + i * 10 + myIdx;//get the same port; i=1 & pIdx=2 =>port=102
+			ep[i].start(ios, "localhost", port, false, name); //channel bwt i and pIdx, where i is sender
+		}
+		else if (i > myIdx)
+		{
+			u32 port = 1210 + myIdx * 10 + i;//get the same port; i=2 & pIdx=1 =>port=102
+			ep[i].start(ios, "localhost", port, true, name); //channel bwt i and pIdx, where i is receiver
+		}
+	}
+
+
+	std::vector<std::vector<Channel*>> chls(nParties);
+
+	for (u64 i = 0; i < nParties; ++i)
+	{
+		if (i != myIdx) {
+			chls[i].resize(numThreads);
+			for (u64 j = 0; j < numThreads; ++j)
+			{
+				//chls[i][j] = &ep[i].addChannel("chl" + std::to_string(j), "chl" + std::to_string(j));
+				chls[i][j] = &ep[i].addChannel(name, name);
+			}
+		}
+	}
+
+	std::vector<KkrtNcoOtReceiver> otRecv(nParties);
+	std::vector<KkrtNcoOtSender> otSend(nParties);
+
+	OPPRFSender send;
+	OPPRFReceiver recv;
+	binSet bins;
+
+	std::vector<std::thread>  pThrds(nParties);
+
+	//##########################
+	//### Offline Phasing
+	//##########################
+
+	auto start = timer.setTimePoint("start");
+
+	bins.init(myIdx, nParties, setSize, psiSecParam, opt);
+	u64 otCountSend = bins.mSimpleBins.mBins.size();
+	u64 otCountRecv = bins.mCuckooBins.mBins.size();
+
+
+	if (myIdx == 0) {
+		//I am a sender to my next neigbour
+		send.init(opt, nParties, setSize, psiSecParam, bitSize, chls[1], otCountSend, otSend[1], otRecv[1], prng.get<block>(), false);
+
+	}
+	else if (myIdx == 1) {
+		//I am a recv to my previous neigbour
+		recv.init(opt, nParties, setSize, psiSecParam, bitSize, chls[0], otCountRecv, otRecv[0], otSend[0], ZeroBlock, false);
+	}
+
+
+#ifdef PRINT
+	std::cout << IoStream::lock;
+	if (myIdx == 0)
+	{
+		Log::out << "------0------" << Log::endl;
+		Log::out << otSend[1].mGens[0].get<block>() << Log::endl;
+		Log::out << otRecv[2].mGens[0][0].get<block>() << Log::endl;
+		Log::out << otRecv[2].mGens[0][1].get<block>() << Log::endl;
+	}
+	if (myIdx == 1)
+	{
+		Log::out << "------1------" << Log::endl;
+		Log::out << otRecv[0].mGens[0][0].get<block>() << Log::endl;
+		Log::out << otRecv[0].mGens[0][1].get<block>() << Log::endl;
+		Log::out << otSend[2].mGens[0].get<block>() << Log::endl;
+	}
+
+	if (myIdx == 2)
+	{
+		Log::out << "------2------" << Log::endl;
+		Log::out << otRecv[1].mGens[0][0].get<block>() << Log::endl;
+		Log::out << otRecv[1].mGens[0][1].get<block>() << Log::endl;
+		Log::out << otSend[0].mGens[0].get<block>() << Log::endl;
+	}
+	std::cout << IoStream::unlock;
+#endif
+
+	auto initDone = timer.setTimePoint("initDone");
+
+	//##########################
+	//### Hashing
+	//##########################
+	bins.hashing2Bins(set, 1);
+	//bins.mSimpleBins.print(myIdx, true, false, false, false);
+	//bins.mCuckooBins.print(myIdx, true, false, false);
+
+	auto hashingDone = timer.setTimePoint("hashingDone");
+
+	//##########################
+	//### Online Phasing - compute OPRF
+	//##########################
+
+
+	if (myIdx == 0) {
+		//I am a sender to my next neigbour
+		send.getOPRFkeys(1, bins, chls[1], false);
+	}
+	else if (myIdx == 1) {
+		//I am a recv to my previous neigbour
+		recv.getOPRFkeys(0, bins, chls[0], false);
+	}
+
+
+	//if (myIdx == 2)
+	//{
+	//	//bins.mSimpleBins.print(2, true, true, false, false);
+	//	bins.mCuckooBins.print(1, true, true, false);
+	//	Log::out << "------------" << Log::endl;
+	//}
+	//if (myIdx == 1)
+	//{
+	//	bins.mSimpleBins.print(2, true, true, false, false);
+	//	//bins.mCuckooBins.print(0, true, true, false);
+	//}
+
+	auto getOPRFDone = timer.setTimePoint("getOPRFDone");
+
+
+	//##########################
+	//### online phasing - secretsharing
+	//##########################
+	if (myIdx == 0)
+	{
+		if(protocolType==0)
+			send.sendSSPolyBased(1, bins, sendPayLoads, chls[1]);
+		else 
+			send.sendBFBased(1, bins, sendPayLoads, chls[1]);
+
+		//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
+
+
+	}
+	else
+	{
+		if (protocolType == 0)
+			recv.recvSSTableBased(0, bins, recvPayLoads, chls[0]);
+		else 
+			send.recvSSTableBased(1, bins, sendPayLoads, chls[1]);
+		//sendPayLoads = recvPayLoads;
+		//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
+	}
+
+
+#ifdef PRINT
+	std::cout << IoStream::lock;
+	if (myIdx == 0)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			Log::out << sendPayLoads[i] << Log::endl;
+			//Log::out << recvPayLoads[2][i] << Log::endl;
+		}
+		Log::out << "------------" << Log::endl;
+	}
+	if (myIdx == 1)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			//Log::out << recvPayLoads[i] << Log::endl;
+			Log::out << sendPayLoads[i] << Log::endl;
+		}
+	}
+	if (myIdx == 2)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			Log::out << sendPayLoads[i] << Log::endl;
+		}
+	}
+	std::cout << IoStream::unlock;
+#endif
+
+	//##########################
+	//### online phasing - compute intersection
+	//##########################
+
+	if (myIdx == 0) {
+		std::vector<u64> mIntersection;
+		u64 maskSize = roundUpTo(psiSecParam + 2 * std::log2(setSize) - 1, 8) / 8;
+		for (u64 i = 0; i < setSize; ++i)
+		{
+			if (!memcmp((u8*)&sendPayLoads[i], &recvPayLoads[i], maskSize))
+			{
+				//	mIntersection.push_back(i);
+			}
+		}
+		Log::out << "mIntersection.size(): " << mIntersection.size() << Log::endl;
+	}
+	auto end = timer.setTimePoint("getOPRFDone");
+
+
+	if (myIdx == 0) {
+		auto offlineTime = std::chrono::duration_cast<std::chrono::milliseconds>(initDone - start).count();
+		auto hashingTime = std::chrono::duration_cast<std::chrono::milliseconds>(hashingDone - initDone).count();
+		auto getOPRFTime = std::chrono::duration_cast<std::chrono::milliseconds>(getOPRFDone - hashingDone).count();
+		auto endTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - getOPRFDone).count();
+
+		double time = offlineTime + hashingTime + getOPRFTime + endTime;
+		time /= 1000;
+
+		std::cout << "setSize: " << setSize << "\n"
+			<< "offlineTime:  " << offlineTime << "\n"
+			<< "hashingTime:  " << hashingTime << "\n"
+			<< "getOPRFTime:  " << getOPRFTime << "\n"
+			<< "secretSharing:  " << endTime << "\n"
+			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << "\n"
+			<< "time: " << time << std::endl;
+	}
+
+	for (u64 i = 0; i < nParties; ++i)
+	{
+		if (i != myIdx)
+		{
+			for (u64 j = 0; j < numThreads; ++j)
+			{
+				chls[i][j]->close();
+			}
+		}
+	}
+
+	for (u64 i = 0; i < nParties; ++i)
+	{
+		if (i != myIdx)
+			ep[i].stop();
+	}
+
+
+	ios.stop();
+}
+
+
 void party2(u64 myIdx, u64 setSize)
 {
 	nParties = 2;
@@ -1252,13 +1527,14 @@ void party2(u64 myIdx, u64 setSize)
 	//##########################
 	if (myIdx == 0)
 	{
-		//	send.sendSSTableBased(nextNeibough, bins, sendPayLoads, chls[nextNeibough]);
+		send.sendSSTableBased(1, bins, sendPayLoads, chls[1]);
 		//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
+
 
 	}
 	else
 	{
-		//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
+		recv.recvSSTableBased(0, bins, recvPayLoads, chls[0]);
 		//sendPayLoads = recvPayLoads;
 		//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
 	}
@@ -1297,19 +1573,19 @@ void party2(u64 myIdx, u64 setSize)
 	//### online phasing - compute intersection
 	//##########################
 
-	if (myIdx == 0) {
-		std::vector<u64> mIntersection;
-		u64 maskSize = roundUpTo(psiSecParam + 2 * std::log2(setSize) - 1, 8) / 8;
-		for (u64 i = 0; i < setSize; ++i)
-		{
-			if (!memcmp((u8*)&sendPayLoads[i], &recvPayLoads[i], maskSize))
-			{
-				//	mIntersection.push_back(i);
-			}
-		}
-		Log::out << "mIntersection.size(): " << mIntersection.size() << Log::endl;
-	}
-	auto end = timer.setTimePoint("getOPRFDone");
+	//if (myIdx == 0) {
+	//	std::vector<u64> mIntersection;
+	//	u64 maskSize = roundUpTo(psiSecParam + 2 * std::log2(setSize) - 1, 8) / 8;
+	//	for (u64 i = 0; i < setSize; ++i)
+	//	{
+	//		if (!memcmp((u8*)&sendPayLoads[i], &recvPayLoads[i], maskSize))
+	//		{
+	//			//	mIntersection.push_back(i);
+	//		}
+	//	}
+	//	Log::out << "mIntersection.size(): " << mIntersection.size() << Log::endl;
+	//}
+	auto end = timer.setTimePoint("okvsDone");
 
 
 	if (myIdx == 0) {
@@ -1325,7 +1601,7 @@ void party2(u64 myIdx, u64 setSize)
 			<< "offlineTime:  " << offlineTime << "\n"
 			<< "hashingTime:  " << hashingTime << "\n"
 			<< "getOPRFTime:  " << getOPRFTime << "\n"
-			<< "secretSharing:  " << endTime << "\n"
+			<< "okvsDone:  " << endTime << "\n"
 			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << "\n"
 			<< "time: " << time << std::endl;
 	}
@@ -1350,6 +1626,8 @@ void party2(u64 myIdx, u64 setSize)
 
 	ios.stop();
 }
+
+
 bool is_in_dual_area(u64 startIdx, u64 endIdx, u64 numIdx, u64 checkIdx) {
 	bool res = false;
 	if (startIdx <= endIdx)

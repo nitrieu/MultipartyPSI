@@ -42,10 +42,46 @@ int main(int argc, char** argv)
 	u64 trials = 1;
 	u64 pSetSize = 5, psiSecParam = 40, bitSize = 128;
 
-	u64 nParties, tParties, opt_basedOPPRF, setSize, isAug;
+	u64 nParties = 2, tParties, opt_basedOPPRF, setSize, isAug;
 
-	u64 roundOPPRF;
+	u64 roundOPPRF, pIdx;
 
+
+	if (argv[1][0] == '-' && argv[1][1] == 'r') {
+		pIdx = atoi(argv[2]);
+	}
+	else
+	{
+		usage(argv[0]);
+		return 0;
+	}
+
+	if (argv[3][0] == '-' && argv[3][1] == 'n')
+		setSize = 1 << atoi(argv[4]);
+	else
+	{
+		usage(argv[0]);
+		return 0;
+	}
+
+
+	if (argv[5][1] == 'p')
+	{
+		cout << "polynomial\t setSize: " << setSize << " " << pIdx <<"\n";
+		okvs(pIdx, setSize, 0);
+	}
+	else if (argv[5][1] == 'b')
+	{
+		cout << "GBF\t setSize: " << setSize << " " << pIdx << "\n";
+		okvs(pIdx, setSize, 1);
+	}
+	else
+	{
+		usage(argv[0]);
+		return 0;
+	}
+
+	return 0;
 
 	switch (argc) {
 	case 2: //unit test
