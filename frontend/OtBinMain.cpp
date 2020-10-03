@@ -1085,7 +1085,7 @@ void party3(u64 myIdx, u64 setSize, u64 nTrials)
 	ios.stop();
 }
 
-void okvs(u64 myIdx, u64 setSize, u64 protocolType)
+void okvs(u64 myIdx, u64 setSize, u64 opt)
 {
 	nParties = 2;
 	u64  psiSecParam = 40, bitSize = 128, numThreads = 1;
@@ -1093,7 +1093,7 @@ void okvs(u64 myIdx, u64 setSize, u64 protocolType)
 
 	std::vector<block> set(setSize);
 	for (u64 i = 0; i < setSize; ++i)
-		set[i] = mSet[i];
+		set[i] = prng.get<block>();
 
 	PRNG prng1(_mm_set_epi32(4253465, myIdx, myIdx, myIdx)); //for test
 	set[0] = prng1.get<block>();;
@@ -1246,30 +1246,29 @@ void okvs(u64 myIdx, u64 setSize, u64 protocolType)
 
 	auto getOPRFDone = timer.setTimePoint("getOPRFDone");
 
+	if (opt == 2)
+		std::cout << "polynomial\t setSize: " << setSize << " \n";
+	else if (opt == 3)
+		std::cout << "GBF\t setSize: " << setSize << " \n";
+
+
 
 	//##########################
 	//### online phasing - secretsharing
 	//##########################
-	//if (myIdx == 0)
-	//{
-	//	if(protocolType==0)
-	//		send.sendSSPolyBased(1, bins, sendPayLoads, chls[1]);
-	//	else 
-	//		send.sendBFBased(1, bins, sendPayLoads, chls[1]);
-
-	//	//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
+	if (myIdx == 0)
+	{
+			send.sendSS(1, bins, sendPayLoads, chls[1]);
+		//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
 
 
-	//}
-	//else
-	//{
-	//	if (protocolType == 0)
-	//		recv.recvSSTableBased(0, bins, recvPayLoads, chls[0]);
-	//	else 
-	//		send.recvSSTableBased(1, bins, sendPayLoads, chls[1]);
-	//	//sendPayLoads = recvPayLoads;
-	//	//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
-	//}
+	}
+	else
+	{
+			recv.recvSS(0, bins, recvPayLoads, chls[0]);
+		//sendPayLoads = recvPayLoads;
+		//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
+	}
 
 
 #ifdef PRINT
@@ -1305,18 +1304,18 @@ void okvs(u64 myIdx, u64 setSize, u64 protocolType)
 	//### online phasing - compute intersection
 	//##########################
 
-	if (myIdx == 0) {
-		std::vector<u64> mIntersection;
-		u64 maskSize = roundUpTo(psiSecParam + 2 * std::log2(setSize) - 1, 8) / 8;
-		for (u64 i = 0; i < setSize; ++i)
-		{
-			if (!memcmp((u8*)&sendPayLoads[i], &recvPayLoads[i], maskSize))
-			{
-				//	mIntersection.push_back(i);
-			}
-		}
-		Log::out << "mIntersection.size(): " << mIntersection.size() << Log::endl;
-	}
+	//if (myIdx == 0) {
+	//	std::vector<u64> mIntersection;
+	//	u64 maskSize = roundUpTo(psiSecParam + 2 * std::log2(setSize) - 1, 8) / 8;
+	//	for (u64 i = 0; i < setSize; ++i)
+	//	{
+	//		if (!memcmp((u8*)&sendPayLoads[i], &recvPayLoads[i], maskSize))
+	//		{
+	//			//	mIntersection.push_back(i);
+	//		}
+	//	}
+	//	Log::out << "mIntersection.size(): " << mIntersection.size() << Log::endl;
+	//}
 	auto end = timer.setTimePoint("getOPRFDone");
 
 
@@ -1327,14 +1326,14 @@ void okvs(u64 myIdx, u64 setSize, u64 protocolType)
 		auto endTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - getOPRFDone).count();
 
 		double time = offlineTime + hashingTime + getOPRFTime + endTime;
-		time /= 1000;
+		//time /= 1000;
 
-		std::cout << "setSize: " << setSize << "\n"
-			<< "offlineTime:  " << offlineTime << "\n"
-			<< "hashingTime:  " << hashingTime << "\n"
-			<< "getOPRFTime:  " << getOPRFTime << "\n"
-			<< "secretSharing:  " << endTime << "\n"
-			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << "\n"
+		std::cout << "setSize: " << setSize << " ms\n"
+			<< "offlineTime:  " << offlineTime << " ms\n"
+			//<< "hashingTime:  " << hashingTime << " ms\n"
+			<< "getOPRFTime:  " << getOPRFTime+ hashingTime << " ms\n"
+			<< "getOkvsTime:  " << endTime << " ms\n\n"
+			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << " ms\n"
 			<< "time: " << time << std::endl;
 	}
 
@@ -1595,15 +1594,14 @@ void party2(u64 myIdx, u64 setSize)
 		auto endTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - getOPRFDone).count();
 
 		double time = offlineTime + hashingTime + getOPRFTime + endTime;
-		time /= 1000;
 
-		std::cout << "setSize: " << setSize << "\n"
-			<< "offlineTime:  " << offlineTime << "\n"
-			<< "hashingTime:  " << hashingTime << "\n"
-			<< "getOPRFTime:  " << getOPRFTime << "\n"
-			<< "okvsDone:  " << endTime << "\n"
-			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << "\n"
-			<< "time: " << time << std::endl;
+		std::cout << "setSize: " << setSize << "ms\n"
+			<< "offlineTime:  " << offlineTime << " ms\n"
+			<< "hashingTime:  " << hashingTime << "ms\n"
+			<< "getOPRFTime:  " << getOPRFTime << "ms\n"
+			<< "okvsDone:  " << endTime << "ms\n"
+			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << "ms\n"
+			<< "totalTime: " << time << "ms\n";
 	}
 
 	for (u64 i = 0; i < nParties; ++i)
@@ -3181,7 +3179,7 @@ void OPPRF3_EmptrySet_Test_Main()
 
 void OPPRF2_EmptrySet_Test_Main()
 {
-	u64 setSize = 1 << 20, psiSecParam = 40, bitSize = 128;
+	u64 setSize = 1 << 12, psiSecParam = 40, bitSize = 128;
 	PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	mSet.resize(setSize);
 	for (u64 i = 0; i < setSize; ++i)
@@ -3204,7 +3202,7 @@ void OPPRF2_EmptrySet_Test_Main()
 
 void okvs_EmptrySet_Test_Main()
 {
-	u64 setSize = 1 << 20, psiSecParam = 40, bitSize = 128;
+	u64 setSize = 1 << 12, psiSecParam = 40, bitSize = 128;
 	PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	mSet.resize(setSize);
 	for (u64 i = 0; i < setSize; ++i)
@@ -3216,7 +3214,7 @@ void okvs_EmptrySet_Test_Main()
 	{
 		pThrds[pIdx] = std::thread([&, pIdx]() {
 			//	Channel_party_test(pIdx);
-			okvs(pIdx, setSize,1);
+			okvs(pIdx, setSize,2);
 			});
 	}
 	for (u64 pIdx = 0; pIdx < pThrds.size(); ++pIdx)

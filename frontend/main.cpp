@@ -25,10 +25,11 @@ void usage(const char* argv0)
 }
 int main(int argc, char** argv)
 {
-	okvs_EmptrySet_Test_Main;
+	//okvs_EmptrySet_Test_Main();
+	//return 0;
 	//myCuckooTest_stash();
 	//Table_Based_Random_Test();
-	OPPRF2_EmptrySet_Test_Main();
+	//OPPRF2_EmptrySet_Test_Main();
 	//OPPRFn_EmptrySet_Test_Main();
 	//Transpose_Test();
 	//OPPRF3_EmptrySet_Test_Main();
@@ -67,13 +68,13 @@ int main(int argc, char** argv)
 
 	if (argv[5][1] == 'p')
 	{
-		cout << "polynomial\t setSize: " << setSize << " " << pIdx <<"\n";
-		okvs(pIdx, setSize, 0);
+		//cout << "polynomial\t setSize: " << setSize << " " << pIdx <<"\n";
+		okvs(pIdx, setSize, 2);
 	}
 	else if (argv[5][1] == 'b')
 	{
-		cout << "GBF\t setSize: " << setSize << " " << pIdx << "\n";
-		okvs(pIdx, setSize, 1);
+		//cout << "GBF\t setSize: " << setSize << " " << pIdx << "\n";
+		okvs(pIdx, setSize, 3);
 	}
 	else
 	{
