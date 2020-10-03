@@ -1250,26 +1250,26 @@ void okvs(u64 myIdx, u64 setSize, u64 protocolType)
 	//##########################
 	//### online phasing - secretsharing
 	//##########################
-	if (myIdx == 0)
-	{
-		if(protocolType==0)
-			send.sendSSPolyBased(1, bins, sendPayLoads, chls[1]);
-		else 
-			send.sendBFBased(1, bins, sendPayLoads, chls[1]);
+	//if (myIdx == 0)
+	//{
+	//	if(protocolType==0)
+	//		send.sendSSPolyBased(1, bins, sendPayLoads, chls[1]);
+	//	else 
+	//		send.sendBFBased(1, bins, sendPayLoads, chls[1]);
 
-		//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
+	//	//	recv.recvSSTableBased(prevNeibough, bins, recvPayLoads, chls[prevNeibough]);
 
 
-	}
-	else
-	{
-		if (protocolType == 0)
-			recv.recvSSTableBased(0, bins, recvPayLoads, chls[0]);
-		else 
-			send.recvSSTableBased(1, bins, sendPayLoads, chls[1]);
-		//sendPayLoads = recvPayLoads;
-		//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
-	}
+	//}
+	//else
+	//{
+	//	if (protocolType == 0)
+	//		recv.recvSSTableBased(0, bins, recvPayLoads, chls[0]);
+	//	else 
+	//		send.recvSSTableBased(1, bins, sendPayLoads, chls[1]);
+	//	//sendPayLoads = recvPayLoads;
+	//	//	send.sendSSTableBased(nextNeibough, bins, recvPayLoads, chls[nextNeibough]);
+	//}
 
 
 #ifdef PRINT
