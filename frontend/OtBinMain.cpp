@@ -1320,15 +1320,15 @@ void okvs(u64 myIdx, u64 setSize, u64 opt, u64 num_bin)
 		auto getOPRFTime = std::chrono::duration_cast<std::chrono::milliseconds>(getOPRFDone - hashingDone).count();
 		auto endTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - getOPRFDone).count();
 
-		double time = offlineTime + hashingTime + getOPRFTime + endTime;
+		double time = offlineTime + (hashingTime + getOPRFTime + endTime) * num_bin;
 		//time /= 1000;
 
-		std::cout << "offlineTime:  " << offlineTime*num_bin << " ms\n" //for estimate the cost
+		std::cout << "offlineTime:  " << offlineTime << " ms\n" //for estimate the cost
 			//<< "hashingTime:  " << hashingTime << " ms\n"
 			<< "getOPRFTime:  " << (getOPRFTime+ hashingTime) * num_bin << " ms\n"
 			<< "getOkvsTime:  " << endTime * num_bin << " ms\n\n"
 			<< "onlineTime:  " <<( hashingTime + getOPRFTime + endTime) * num_bin << " ms\n"
-			<< "totalTime: " << time * num_bin << std::endl;
+			<< "totalTime: " << time << std::endl;
 	}
 
 	for (u64 i = 0; i < nParties; ++i)
