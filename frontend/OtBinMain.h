@@ -16,7 +16,7 @@ void Bit_Position_Random_Test();
 void OPPRFnt_EmptrySet_Test_Main();
 void party3(u64 myIdx, u64 setSize, u64 nTrials);
 void party2(u64 myIdx, u64 setSize);
-void okvs(u64 myIdx, u64 setSize, u64 protocolType); //0 for poly; 1 for GBF
+void okvs(u64 myIdx, u64 setSize, u64 protocolType, u64 num_bin); //2 for poly; 3 for GBF (num_bin=1 for GBF)
 void party(u64 myIdx, u64 nParties, u64 setSize, std::vector<block>& mSet);
 void tparty(u64 myIdx, u64 nParties, u64 tParties, u64 setSize, u64 nTrials);
 void aug_party(u64 myIdx, u64 nParties, u64 setSize,u64 opt, u64 nTrials);

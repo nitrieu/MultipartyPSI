@@ -66,15 +66,20 @@ int main(int argc, char** argv)
 	}
 
 
-	if (argv[5][1] == 'p')
+	if (argv[5][1] == 'p' && argv[5][2] == 'o' && argv[5][3] == 'l' && argv[5][4] == 'y' 
+		&& argv[6][0] == '-' && argv[6][1] == 'b')
 	{
-		//cout << "polynomial\t setSize: " << setSize << " " << pIdx <<"\n";
-		okvs(pIdx, setSize, 2);
+		u64 numbin= atoi(argv[7]);
+		double ratio = setSize / numbin;
+		u64 binsize = 1.3 * ratio;
+
+		cout << "polynomial\t  setSize: " << setSize << " " << pIdx << "\t numbin: " << numbin << "\t binsize: " << binsize << "\n";
+		okvs(pIdx, binsize, 2, numbin);
 	}
-	else if (argv[5][1] == 'b')
+	else if (argv[5][1] == 'g' && argv[5][2] == 'b' && argv[5][3] == 'f')
 	{
-		//cout << "GBF\t setSize: " << setSize << " " << pIdx << "\n";
-		okvs(pIdx, setSize, 3);
+		cout << "GBF\t setSize: " << setSize << " " << pIdx << "\n";
+		okvs(pIdx, setSize, 3,1); //GBF with 1 bin
 	}
 	else
 	{

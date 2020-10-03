@@ -1085,7 +1085,7 @@ void party3(u64 myIdx, u64 setSize, u64 nTrials)
 	ios.stop();
 }
 
-void okvs(u64 myIdx, u64 setSize, u64 opt)
+void okvs(u64 myIdx, u64 setSize, u64 opt, u64 num_bin)
 {
 	nParties = 2;
 	u64  psiSecParam = 40, bitSize = 128, numThreads = 1;
@@ -1246,11 +1246,6 @@ void okvs(u64 myIdx, u64 setSize, u64 opt)
 
 	auto getOPRFDone = timer.setTimePoint("getOPRFDone");
 
-	if (opt == 2)
-		std::cout << "polynomial\t setSize: " << setSize << " \n";
-	else if (opt == 3)
-		std::cout << "GBF\t setSize: " << setSize << " \n";
-
 
 
 	//##########################
@@ -1328,13 +1323,12 @@ void okvs(u64 myIdx, u64 setSize, u64 opt)
 		double time = offlineTime + hashingTime + getOPRFTime + endTime;
 		//time /= 1000;
 
-		std::cout << "setSize: " << setSize << " ms\n"
-			<< "offlineTime:  " << offlineTime << " ms\n"
+		std::cout << "offlineTime:  " << offlineTime*num_bin << " ms\n" //for estimate the cost
 			//<< "hashingTime:  " << hashingTime << " ms\n"
-			<< "getOPRFTime:  " << getOPRFTime+ hashingTime << " ms\n"
-			<< "getOkvsTime:  " << endTime << " ms\n\n"
-			<< "onlineTime:  " << hashingTime + getOPRFTime + endTime << " ms\n"
-			<< "time: " << time << std::endl;
+			<< "getOPRFTime:  " << (getOPRFTime+ hashingTime) * num_bin << " ms\n"
+			<< "getOkvsTime:  " << endTime * num_bin << " ms\n\n"
+			<< "onlineTime:  " <<( hashingTime + getOPRFTime + endTime) * num_bin << " ms\n"
+			<< "totalTime: " << time * num_bin << std::endl;
 	}
 
 	for (u64 i = 0; i < nParties; ++i)
@@ -3214,7 +3208,7 @@ void okvs_EmptrySet_Test_Main()
 	{
 		pThrds[pIdx] = std::thread([&, pIdx]() {
 			//	Channel_party_test(pIdx);
-			okvs(pIdx, setSize,2);
+			okvs(pIdx, setSize,3,1);
 			});
 	}
 	for (u64 pIdx = 0; pIdx < pThrds.size(); ++pIdx)
