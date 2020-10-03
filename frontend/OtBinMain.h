@@ -24,3 +24,5 @@ void OPPRFn_Aug_EmptrySet_Test_Impl();
 void OPPRFnt_EmptrySet_Test_Impl();
 void BinSize(u64 setSize, std::vector<block> set, u64 psiSecParam);
 //void OPPRFn_EmptrySet_Test();
+
+void okvs_EmptrySet_Test_Main();

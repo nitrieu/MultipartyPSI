@@ -25,6 +25,7 @@ void usage(const char* argv0)
 }
 int main(int argc, char** argv)
 {
+	okvs_EmptrySet_Test_Main;
 	//myCuckooTest_stash();
 	//Table_Based_Random_Test();
 	OPPRF2_EmptrySet_Test_Main();

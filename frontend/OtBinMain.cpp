@@ -3202,6 +3202,31 @@ void OPPRF2_EmptrySet_Test_Main()
 
 }
 
+void okvs_EmptrySet_Test_Main()
+{
+	u64 setSize = 1 << 20, psiSecParam = 40, bitSize = 128;
+	PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	mSet.resize(setSize);
+	for (u64 i = 0; i < setSize; ++i)
+	{
+		mSet[i] = prng.get<block>();
+	}
+	std::vector<std::thread>  pThrds(2);
+	for (u64 pIdx = 0; pIdx < pThrds.size(); ++pIdx)
+	{
+		pThrds[pIdx] = std::thread([&, pIdx]() {
+			//	Channel_party_test(pIdx);
+			okvs(pIdx, setSize,1);
+			});
+	}
+	for (u64 pIdx = 0; pIdx < pThrds.size(); ++pIdx)
+		pThrds[pIdx].join();
+
+
+}
+
+
+
 
 void OPPRFn_Aug_EmptrySet_Test_Impl()
 {
